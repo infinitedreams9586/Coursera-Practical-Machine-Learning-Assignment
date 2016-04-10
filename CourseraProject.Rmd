@@ -1,0 +1,101 @@
+---
+title: "Coursera-Machine-Learning"
+author: "Dave"
+date: "April 9, 2016"
+output: html_document
+---
+## Introduction
+This analysis is related to the project assignment for the "Practical Machine Learning" course on coursera. 
+Assignment background is as follows,
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+Submission criteria is as follows,
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+# Packages
+
+```{r ImportingCaret, include=FALSE}
+library(caret)
+```
+
+```{r ImportingLibraries}
+library(randomForest)
+library(corrplot)
+library(rpart)
+library(rpart.plot)
+```
+
+# Reading data files
+```{r }
+trainingData <- read.csv("/Users/bhaveshdave/Desktop/Coursera/files/pml-training.csv")
+testingData <- read.csv("/Users/bhaveshdave/Desktop/Coursera/files/pml-testing.csv")
+```
+
+# Data summary
+Dimensions of training data and testing data are as follows
+```{r }
+set.seed(2016)
+# training data
+dim(trainingData)
+# testing data
+dim(testingData)
+```
+
+# Data cleanup
+Now, we will be cleaning up the training data and remove the observations with missing values as well as not useful variables
+```{r }
+trainingData <- trainingData[,colSums(is.na(trainingData)) == 0]
+classe <- trainingData$classe
+trainRemove <- grepl("^X|timestamp|window", names(trainingData))
+trainingData <- trainingData[, !trainRemove]
+trainCleaned <- trainingData[, sapply(trainingData, is.numeric)]
+trainCleaned$classe <- classe
+```
+
+# Cleaned data summary
+New dimension of cleaned training data is as follows
+```{r }
+dim(trainCleaned)
+```
+
+# Partitioning Data
+Split the cleaned training data set into a training data set (75%) and testing
+data set (25%) for cross validation purpose
+```{r }
+inTrain <- createDataPartition(trainCleaned$classe, p= 0.75, list=FALSE)
+training <- trainCleaned[inTrain,]
+testing <- trainCleaned[-inTrain,]
+```
+
+# Creating Model & Summary of Model performance
+Using random forrest algorithm we will fit a predictive model for activity
+```{r }
+modelRf <- randomForest(classe ~ ., data=training, ntree=250)
+predictionRf <- predict(modelRf, testing, type = "class")
+conMatrix <- confusionMatrix(predictionRf, testing$classe)
+
+# Performance of this model on the validation dataset (testing set) is as follows
+conMatrix
+```
+
+# Model fitting plot
+```{r }
+plot(modelRf)
+```
+
+# Tree visualization 
+Tree visualization of the model is as follows
+```{r }
+tree <- rpart(classe~., data=training, method="class")
+prp(tree)
+```
+
+# Applying model to the testing data
+Applying the model to the original testing data set for assignment's 20 cases
+result is as follows
+```{r }
+predictionOnTest <- predict(modelRf, testingData, type="class")
+predictionOnTest
+```
